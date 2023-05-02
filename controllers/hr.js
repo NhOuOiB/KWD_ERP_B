@@ -14,8 +14,17 @@ async function getEmployee(req, res) {
 
 async function getEmployeeById(req, res) {
     let { eid } = req.query;
-    console.log(eid)
-    let data = await hrModel.getEmployeeById(eid)
+    let data = await hrModel.getEmployeeById(eid);
+    res.json(data);
+}
+
+async function getLeave(req, res) {
+    let data = await hrModel.getLeave();
+    res.json(data);
+}
+
+async function getLeaveRecord(req, res) {
+    let data = await hrModel.getLeaveRecord()
     res.json(data)
 }
 
@@ -41,7 +50,6 @@ async function addEmployee(req, res) {
         acc[name] = value;
         return acc;
     }, {});
-    let now = moment().format();
     hrModel.addEmployee(
         employee_id,
         name,
@@ -63,9 +71,21 @@ async function addEmployee(req, res) {
     res.json('成功');
 }
 
+async function addLeave(req, res) {
+    req.body.map((v, i) => {
+        const { begin, end, employee_id, leave_id, hour, note } = v;
+        let now = moment().format();
+        hrModel.addLeave(begin, end, employee_id, leave_id, hour, note, now);
+    });
+    res.json('成功')
+}
+
 module.exports = {
     getDepartmentName,
     getEmployee,
     getEmployeeById,
+    getLeave,
+    getLeaveRecord,
     addEmployee,
+    addLeave,
 };

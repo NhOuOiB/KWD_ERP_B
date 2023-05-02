@@ -1,7 +1,7 @@
 const pool = require('../utils/db');
 
 async function getDepartmentName() {
-    let data = await pool.query('SELECT * FROM department');
+    let data = await pool.query('SELECT * FROM department WHERE enable = 1');
     return data[0];
 }
 
@@ -21,8 +21,17 @@ async function getEmployeeById(eid = '') {
 `,
         [eid]
     );
-    console.log(data);
     return data;
+}
+
+async function getLeave() {
+    let data = await pool.query('SELECT * FROM day_off WHERE enable = 1');
+    return data[0];
+}
+
+async function getLeaveRecord() {
+    let data = await pool.query('SELECT lr.*, e.name, d.leave_name FROM leave_record lr LEFT JOIN employee e ON lr.employee_id = e.employee_id LEFT JOIN day_off d ON lr.leave_id = d.leave_id ORDER BY time DESC');
+    return data[0];
 }
 
 async function addEmployee(
@@ -83,4 +92,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     );
 }
 
-module.exports = { getEmployee, getDepartmentName, getEmployeeById, addEmployee };
+async function addLeave(begin, end, employee_id, leave_id, hour, note, now) {
+    await pool.execute(
+        `INSERT INTO leave_record (employee_id, leave_id, hour, begin, end, note, time) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [employee_id, leave_id, hour, begin, end, note, now]
+    );
+}
+
+module.exports = { getEmployee, getDepartmentName, getEmployeeById, getLeave, getLeaveRecord, addEmployee, addLeave };
