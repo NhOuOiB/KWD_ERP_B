@@ -6,7 +6,7 @@ async function getDepartmentName() {
 }
 
 async function getEmployee(keyWord = '') {
-    let data = await pool.query('SELECT * FROM employee WHERE status = 1 AND name Like ?', [`%${keyWord}%`]);
+    let data = await pool.query('SELECT * FROM employee WHERE name Like ?', [`%${keyWord}%`]);
     return data[0];
 }
 
@@ -30,7 +30,14 @@ async function getLeave() {
 }
 
 async function getLeaveRecord() {
-    let data = await pool.query('SELECT lr.*, e.name, d.leave_name FROM leave_record lr LEFT JOIN employee e ON lr.employee_id = e.employee_id LEFT JOIN day_off d ON lr.leave_id = d.leave_id ORDER BY time DESC');
+    let data = await pool.query(
+        'SELECT lr.*, e.name, d.leave_name FROM leave_record lr LEFT JOIN employee e ON lr.employee_id = e.employee_id LEFT JOIN day_off d ON lr.leave_id = d.leave_id ORDER BY time DESC'
+    );
+    return data[0];
+}
+
+async function getStatus() {
+    let data = await pool.query('SELECT * FROM status WHERE enable = 1');
     return data[0];
 }
 
@@ -99,4 +106,61 @@ async function addLeave(begin, end, employee_id, leave_id, hour, note, now) {
     );
 }
 
-module.exports = { getEmployee, getDepartmentName, getEmployeeById, getLeave, getLeaveRecord, addEmployee, addLeave };
+async function updateEmployee(
+    id,
+    employee_id,
+    name,
+    department_id,
+    registration_date,
+    leave_date,
+    tel,
+    phone,
+    email,
+    address,
+    gender,
+    ext,
+    emergency_contact,
+    emergency_contact_phone,
+    birth,
+    sign,
+    education,
+    note,
+    status_id
+) {
+    await pool.execute(
+        `UPDATE employee SET employee_id = ?,  name = ? , department_id = ?, registration_date = ?, leave_date = ?, tel = ?, phone = ?, email = ?, address= ?, gender = ?, ext = ?, emergency_contact = ?, emergency_contact_phone = ?, birth = ?, sign = ?, education = ?, note = ?, status = ? WHERE id = ?`,
+        [
+            employee_id,
+            name,
+            department_id,
+            registration_date,
+            leave_date,
+            tel,
+            phone,
+            email,
+            address,
+            gender,
+            ext,
+            emergency_contact,
+            emergency_contact_phone,
+            birth,
+            sign,
+            education,
+            note,
+            status_id,
+            id,
+        ]
+    );
+}
+
+module.exports = {
+    getEmployee,
+    getDepartmentName,
+    getEmployeeById,
+    getLeave,
+    getLeaveRecord,
+    getStatus,
+    addEmployee,
+    addLeave,
+    updateEmployee,
+};

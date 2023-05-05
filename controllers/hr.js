@@ -24,8 +24,13 @@ async function getLeave(req, res) {
 }
 
 async function getLeaveRecord(req, res) {
-    let data = await hrModel.getLeaveRecord()
-    res.json(data)
+    let data = await hrModel.getLeaveRecord();
+    res.json(data);
+}
+
+async function getStatus(req, res) {
+    let data = await hrModel.getStatus();
+    res.json(data);
 }
 
 async function addEmployee(req, res) {
@@ -77,7 +82,54 @@ async function addLeave(req, res) {
         let now = moment().format();
         hrModel.addLeave(begin, end, employee_id, leave_id, hour, note, now);
     });
-    res.json('成功')
+    res.json('成功');
+}
+
+async function updateEmployee(req, res) {
+    console.log(req.body);
+    const {
+        id,
+        employee_id,
+        name,
+        department_id,
+        registration_date,
+        leave_date,
+        tel,
+        phone,
+        email,
+        address,
+        gender,
+        ext,
+        emergency_contact,
+        emergency_contact_phone,
+        birth,
+        sign,
+        education,
+        note,
+        status_id,
+    } = req.body;
+    hrModel.updateEmployee(
+        id,
+        employee_id,
+        name,
+        department_id,
+        registration_date,
+        leave_date,
+        tel,
+        phone,
+        email,
+        address,
+        gender,
+        ext,
+        emergency_contact,
+        emergency_contact_phone,
+        birth,
+        sign,
+        education,
+        note,
+        status_id
+    );
+    res.json('成功');
 }
 
 module.exports = {
@@ -86,6 +138,8 @@ module.exports = {
     getEmployeeById,
     getLeave,
     getLeaveRecord,
+    getStatus,
     addEmployee,
     addLeave,
+    updateEmployee,
 };

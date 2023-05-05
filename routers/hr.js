@@ -12,8 +12,12 @@ router.get('/getLeave', hrController.getLeave);
 
 router.get('/getLeaveRecord', hrController.getLeaveRecord);
 
+router.get('/getStatus', hrController.getStatus);
+
 router.post('/addEmployee', hrController.addEmployee);
 
 router.post('/addLeave', hrController.addLeave);
+
+router.put('/updateEmployee', hrController.updateEmployee);
 
 module.exports = router;
