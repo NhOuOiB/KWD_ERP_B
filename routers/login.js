@@ -7,7 +7,6 @@ require('dotenv').config();
 router.post('/login', async (req, res) => {
     let [users] = await pool.execute('SELECT * FROM account WHERE account = ?', [req.body.account]);
     //確認資料庫有無此信箱
-    console.log(users);
     if (users.length == 0) {
         return res.status(401).json({ message: '信箱或密碼錯誤' });
     }
