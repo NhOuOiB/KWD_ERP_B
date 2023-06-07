@@ -6,7 +6,11 @@ async function getDepartmentName() {
 }
 
 async function getEmployee(keyWord = '') {
-    let data = await pool.query('SELECT * FROM employee WHERE name Like ?', [`%${keyWord}%`]);
+   let data = await pool.query(
+       'SELECT e.*, COALESCE(SUM(lr.hour), 0) AS total_hour, d.department_name FROM employee e LEFT JOIN leave_record lr ON e.employee_id = lr.employee_id AND lr.leave_id = 3 LEFT JOIN department d ON e.department_id = d.department_id WHERE e.name LIKE ? GROUP BY e.employee_id',
+       [`%${keyWord}%`]
+   );
+
     return data[0];
 }
 

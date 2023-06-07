@@ -7,9 +7,107 @@ async function getDepartmentName(req, res) {
 }
 
 async function getEmployee(req, res) {
+    
     let { name } = req.query;
     let data = await hrModel.getEmployee(name);
-    res.json(data);
+    
+    let cal = data.map((v) => {
+        const seniority = moment().diff(v.registration_date, 'months');
+        const seniority_year = moment().diff(v.registration_date, 'years');
+
+        let specialLeave = 0;
+        if (seniority >= 6 && seniority <= 12) {
+            specialLeave = 3;
+        } else if (seniority_year > 1) {
+            specialLeave = 3;
+            for (let i = 1; i < seniority_year + 1; i++) {
+                switch (i) {
+                    case 1:
+                        specialLeave += 7;
+                        break;
+                    case 2:
+                        specialLeave += 10;
+                        break;
+                    case 3:
+                        specialLeave += 14;
+                        break;
+                    case 4:
+                        specialLeave += 14;
+                        break;
+                    case 5:
+                        specialLeave += 15;
+                        break;
+                    case 6:
+                        specialLeave += 15;
+                        break;
+                    case 7:
+                        specialLeave += 15;
+                        break;
+                    case 8:
+                        specialLeave += 15;
+                        break;
+                    case 9:
+                        specialLeave += 15;
+                        break;
+                    case 10:
+                        specialLeave += 16;
+                        break;
+                    case 11:
+                        specialLeave += 17;
+                        break;
+                    case 12:
+                        specialLeave += 18;
+                        break;
+                    case 13:
+                        specialLeave += 19;
+                        break;
+                    case 14:
+                        specialLeave += 20;
+                        break;
+                    case 15:
+                        specialLeave += 21;
+                        break;
+                    case 16:
+                        specialLeave += 22;
+                        break;
+                    case 17:
+                        specialLeave += 23;
+                        break;
+                    case 18:
+                        specialLeave += 24;
+                        break;
+                    case 19:
+                        specialLeave += 25;
+                        break;
+                    case 20:
+                        specialLeave += 26;
+                        break;
+                    case 21:
+                        specialLeave += 27;
+                        break;
+                    case 22:
+                        specialLeave += 28;
+                        break;
+                    case 23:
+                        specialLeave += 29;
+                        break;
+                    case 24:
+                        specialLeave += 30;
+                        break;
+                    case 25:
+                        specialLeave += 30;
+                        break;
+                    default:
+                        specialLeave += 30;
+                        break;
+                }
+            }
+        }
+        return { ...v, specialLeave };
+    });
+    console.log(cal);
+
+    res.json(cal);
 }
 
 async function getEmployeeById(req, res) {
