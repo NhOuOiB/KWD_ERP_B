@@ -4,15 +4,21 @@ const hrController = require('../controllers/hr');
 
 router.get('/getDepartmentName', hrController.getDepartmentName);
 
-router.get('/getEmployee', hrController.getEmployee)
+router.get('/getEmployee', hrController.getEmployee);
 
-router.get('/getEmployeeById', hrController.getEmployeeById)
+router.get('/getEmployeeById', hrController.getEmployeeById);
 
 router.get('/getLeave', hrController.getLeave);
 
 router.get('/getLeaveRecord', hrController.getLeaveRecord);
 
 router.get('/getStatus', hrController.getStatus);
+
+router.get('/getAllowance', hrController.getAllowance);
+
+router.get('/getDeduction', hrController.getDeduction);
+
+router.get('/getSalary', hrController.getSalary);
 
 router.post('/addEmployee', hrController.addEmployee);
 
