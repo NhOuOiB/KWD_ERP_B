@@ -1,4 +1,5 @@
 const pool = require('../utils/db');
+const moment = require('moment');
 
 async function getDepartmentName() {
   let data = await pool.query('SELECT * FROM department WHERE enable = 1');
@@ -35,7 +36,7 @@ async function getLeave() {
 
 async function getLeaveRecord() {
   let data = await pool.query(
-    'SELECT lr.*, e.name, d.leave_name FROM leave_record lr LEFT JOIN employee e ON lr.employee_id = e.employee_id LEFT JOIN day_off d ON lr.leave_id = d.leave_id ORDER BY end DESC'
+    'SELECT lr.*, e.name, d.leave_name FROM leave_record lr LEFT JOIN employee e ON lr.employee_id = e.employee_id LEFT JOIN day_off d ON lr.leave_id = d.leave_id ORDER BY begin DESC'
   );
   return data[0];
 }
@@ -55,46 +56,57 @@ async function getDeduction() {
   return data[0];
 }
 
-async function getSalary() {
-  let data = await pool.query(`SELECT e.employee_id, e.name, e.registration_date, d.department_name,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '月薪') AS salary,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '獎金') AS bonus,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '誤餐補助') AS overtime_meal,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '加班補助') AS overtime,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '個人提繳6%') AS six_percent,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '代訂便當') AS bento,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '代扣稅額') AS tax,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '個人負擔勞保') AS labor_insurance,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '個人負擔健保') AS health_insurance,
-    (SELECT sc.price FROM salary_count sc 
-        INNER JOIN salary_item si ON sc.salary_item_id = si.salary_item_id 
-        WHERE sc.employee_id = e.employee_id AND si.salary_item_name = '眷屬加保') AS family_dependants,
-    (SELECT SUM(lr.hour) FROM leave_record lr
+async function getSalary(time) {
+  let record = await pool.query(
+    `SELECT sr.*, e.name, e.registration_date, d.department_name 
+    FROM salary_record sr
+    INNER JOIN employee e ON sr.employee_id = e.employee_id
+    INNER JOIN department d ON e.department_id = d.department_id
+    WHERE time LIKE ?
+    ORDER BY e.employee_id`,
+    [time + '%']
+  );
+  let data = await pool.query(
+    `SELECT e.employee_id, e.name, registration_date, d.department_name, e.six_percent AS six, e.salary, 
+        (SELECT SUM(lr.hour) FROM leave_record lr
         INNER JOIN day_off do ON lr.leave_id = do.leave_id
-        WHERE lr.employee_id = e.employee_id AND do.leave_name = '病假') AS sick,
-    (SELECT SUM(lr.hour) FROM leave_record lr
+        WHERE lr.employee_id = e.employee_id AND do.leave_name = '病假' AND lr.end Like ? ) AS sick, 
+        (SELECT SUM(lr.hour) FROM leave_record lr
         INNER JOIN day_off do ON lr.leave_id = do.leave_id
-        WHERE lr.employee_id = e.employee_id AND do.leave_name = '事假') AS personal
-    FROM employee e
-    INNER JOIN department d ON e.department_id = d.id;`);
+        WHERE lr.employee_id = e.employee_id AND do.leave_name = '事假' AND lr.end Like ?) AS personal,
+        (CASE WHEN e.family_dependant_name_1 IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN e.family_dependant_name_2 IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN e.family_dependant_name_3 IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN e.family_dependant_name_4 IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN e.family_dependant_name_5 IS NOT NULL THEN 1 ELSE 0 END) AS family,
+        0 AS sick_leave,
+        0 AS personal_leave,
+        0 AS bonus,
+        0 AS overtime,
+        0 AS overtime_meal, 
+        0 AS bento, 
+        0 AS tax,
+        0 AS six_percent,
+        0 AS total_family_dependants,
+        0 AS labor_insurance,
+        0 AS health_insurance,
+        0 AS total,
+        0 AS deduction,
+        0 AS actually
+        FROM employee e 
+        INNER JOIN department d ON e.department_id = d.id
+        WHERE e.status != 1 AND e.status != 3;`,
+    [time + '%', time + '%']
+  );
+  if (record[0].length > 0) {
+    return [{ record: true }, record[0]];
+  }
+  return [{ record: false }, data[0]];
+}
+
+async function getSalaryRecord() {
+  let data = await pool.query(`SELECT DATE_FORMAT(time, '%Y-%m') AS month FROM salary_record GROUP BY month ORDER BY month DESC`);
+
   return data[0];
 }
 
@@ -114,28 +126,82 @@ async function addEmployee(
   sign,
   education,
   ext,
-  note
+  note,
+  family_dependant_name_1,
+  family_dependant_relationship_1,
+  family_dependant_name_2,
+  family_dependant_relationship_2,
+  family_dependant_name_3,
+  family_dependant_relationship_3,
+  family_dependant_name_4,
+  family_dependant_relationship_4,
+  family_dependant_name_5,
+  family_dependant_relationship_5,
+  six,
+  salary
 ) {
   let result = await pool.execute(
-    `INSERT INTO employee ( employee_id,
-        name,
-        department_id,
-        gender,
-        registration_date,
-        birth,
-        tel,
-        phone,
-        email,
-        address,
-        emergency_contact,
-        emergency_contact_phone,
-        sign,
-        education,
-        ext,
-        note) 
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO employee 
+    (employee_id,
+    name,
+    department_id,
+    gender,
+    registration_date,
+    birth,
+    tel,
+    phone,
+    email,
+    address,
+    emergency_contact,
+    emergency_contact_phone,
+    sign,
+    education,
+    ext,
+    note,
+    family_dependant_name_1,
+    family_dependant_relationship_1,
+    family_dependant_name_2,
+    family_dependant_relationship_2,
+    family_dependant_name_3,
+    family_dependant_relationship_3,
+    family_dependant_name_4,
+    family_dependant_relationship_4,
+    family_dependant_name_5,
+    family_dependant_relationship_5,
+    six,
+    salary) 
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `,
-    [employee_id, name, department_id, gender, registration_date, birth, tel, phone, email, address, emergency_contact, emergency_contact_phone, sign, education, ext, note]
+    [
+      employee_id,
+      name,
+      department_id,
+      gender,
+      registration_date,
+      birth,
+      tel,
+      phone,
+      email,
+      address,
+      emergency_contact,
+      emergency_contact_phone,
+      sign,
+      education,
+      ext,
+      note,
+      family_dependant_name_1,
+      family_dependant_relationship_1,
+      family_dependant_name_2,
+      family_dependant_relationship_2,
+      family_dependant_name_3,
+      family_dependant_relationship_3,
+      family_dependant_name_4,
+      family_dependant_relationship_4,
+      family_dependant_name_5,
+      family_dependant_relationship_5,
+      six,
+      salary,
+    ]
   );
 }
 
@@ -149,6 +215,60 @@ async function addLeave(begin, end, employee_id, leave_id, hour, note, now) {
     note,
     now,
   ]);
+}
+
+async function addSalary(salary, now) {
+  let timeCheck = await pool.query(`SELECT * FROM salary_record WHERE time LIKE ?`, [salary[0].time + `%`]);
+  console.log(moment(salary[0].time).format());
+
+  if (timeCheck[0].length > 0) {
+    return { message: '該月份已經有紀錄了' };
+  }
+  salary.forEach(async (item) => {
+    let {
+      employee_id,
+      salary,
+      sick_leave,
+      personal_leave,
+      bonus,
+      overtime,
+      overtime_meal,
+      labor_insurance,
+      health_insurance,
+      six_percent,
+      bento,
+      tax,
+      total_family_dependants,
+      total,
+      deduction,
+      actually,
+      time,
+    } = item;
+    let result = await pool.execute(
+      'INSERT INTO salary_record (employee_id, salary, sick_leave, personal_leave, bonus, overtime, overtime_meal, labor_insurance, health_insurance, family_dependants, six_percent, bento, tax, total, deduction, actually, time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        employee_id,
+        salary,
+        sick_leave,
+        personal_leave,
+        bonus,
+        overtime,
+        overtime_meal,
+        labor_insurance,
+        health_insurance,
+        total_family_dependants,
+        six_percent,
+        bento,
+        tax,
+        total,
+        deduction,
+        actually,
+        moment(time).format(),
+      ]
+    );
+    // console.log(result);
+  });
+  return { message: '薪資紀錄新增成功' };
 }
 
 async function updateEmployee(
@@ -170,10 +290,23 @@ async function updateEmployee(
   sign,
   education,
   note,
-  status_id
+  status_id,
+  bank,
+  family_dependant_name_1,
+  family_dependant_name_2,
+  family_dependant_name_3,
+  family_dependant_name_4,
+  family_dependant_name_5,
+  family_dependant_relationship_1,
+  family_dependant_relationship_2,
+  family_dependant_relationship_3,
+  family_dependant_relationship_4,
+  family_dependant_relationship_5,
+  salary,
+  six_percent
 ) {
-  await pool.execute(
-    `UPDATE employee SET employee_id = ?,  name = ? , department_id = ?, registration_date = ?, leave_date = ?, tel = ?, phone = ?, email = ?, address= ?, gender = ?, ext = ?, emergency_contact = ?, emergency_contact_phone = ?, birth = ?, sign = ?, education = ?, note = ?, status = ? WHERE id = ?`,
+  let result = await pool.execute(
+    `UPDATE employee SET employee_id = ?,  name = ? , department_id = ?, registration_date = ?, leave_date = ?, tel = ?, phone = ?, email = ?, address= ?, gender = ?, ext = ?, emergency_contact = ?, emergency_contact_phone = ?, birth = ?, sign = ?, education = ?, note = ?, status = ?, bank = ?, family_dependant_name_1 = ?, family_dependant_name_2 = ?, family_dependant_name_3 = ?, family_dependant_name_4 = ?, family_dependant_name_5 = ?, family_dependant_relationship_1 = ?, family_dependant_relationship_2 = ?, family_dependant_relationship_3 = ?, family_dependant_relationship_4 = ?, family_dependant_relationship_5 = ?, salary = ?, six_percent = ? WHERE id = ?`,
     [
       employee_id,
       name,
@@ -193,9 +326,30 @@ async function updateEmployee(
       education,
       note,
       status_id,
+      bank,
+      family_dependant_name_1,
+      family_dependant_name_2,
+      family_dependant_name_3,
+      family_dependant_name_4,
+      family_dependant_name_5,
+      family_dependant_relationship_1,
+      family_dependant_relationship_2,
+      family_dependant_relationship_3,
+      family_dependant_relationship_4,
+      family_dependant_relationship_5,
+      salary,
+      six_percent,
       id,
     ]
   );
+
+  if (result[0].changedRows == 1) {
+    return { message: '更新成功' };
+  } else if (result[0].changedRows == 0) {
+    return { message: '沒有資料更新' };
+  } else {
+    return { message: '更新失敗' };
+  }
 }
 
 module.exports = {
@@ -208,7 +362,9 @@ module.exports = {
   getAllowance,
   getDeduction,
   getSalary,
+  getSalaryRecord,
   addEmployee,
   addLeave,
+  addSalary,
   updateEmployee,
 };

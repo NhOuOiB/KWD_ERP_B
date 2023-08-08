@@ -140,16 +140,51 @@ async function getDeduction(req, res) {
 }
 
 async function getSalary(req, res) {
-  let data = await hrModel.getSalary();
+  let { time } = req.query;
+  let data = await hrModel.getSalary(time);
+  console.log(data);
+  res.json(data);
+}
+
+async function getSalaryRecord(req, res) {
+  let data = await hrModel.getSalaryRecord();
   res.json(data);
 }
 
 async function addEmployee(req, res) {
-  const { employee_id, name, department_id, gender, registration_date, birth, tel, phone, email, address, emergency_contact, emergency_contact_phone, sign, education, ext, note } =
-    req.body.reduce((acc, { name, value }) => {
-      acc[name] = value;
-      return acc;
-    }, {});
+  const {
+    employee_id,
+    name,
+    department_id,
+    gender,
+    registration_date,
+    birth,
+    tel,
+    phone,
+    email,
+    address,
+    emergency_contact,
+    emergency_contact_phone,
+    sign,
+    education,
+    ext,
+    note,
+    family_dependant_name_1,
+    family_dependant_relationship_1,
+    family_dependant_name_2,
+    family_dependant_relationship_2,
+    family_dependant_name_3,
+    family_dependant_relationship_3,
+    family_dependant_name_4,
+    family_dependant_relationship_4,
+    family_dependant_name_5,
+    family_dependant_relationship_5,
+    six,
+    salary,
+  } = req.body.reduce((acc, { name, value }) => {
+    acc[name] = value;
+    return acc;
+  }, {});
   hrModel.addEmployee(
     employee_id,
     name,
@@ -166,18 +201,36 @@ async function addEmployee(req, res) {
     sign,
     education,
     ext,
-    note
+    note,
+    family_dependant_name_1,
+    family_dependant_relationship_1,
+    family_dependant_name_2,
+    family_dependant_relationship_2,
+    family_dependant_name_3,
+    family_dependant_relationship_3,
+    family_dependant_name_4,
+    family_dependant_relationship_4,
+    family_dependant_name_5,
+    family_dependant_relationship_5,
+    six,
+    salary
   );
   res.json('成功');
 }
 
 async function addLeave(req, res) {
-  req.body.map((v, i) => {
+  req.body.map((v) => {
     const { begin, end, employee_id, leave_id, hour, note } = v;
     let now = moment().format();
     hrModel.addLeave(begin, end, employee_id, leave_id, hour, note, now);
   });
   res.json('成功');
+}
+
+async function addSalary(req, res) {
+  const salary = req.body;
+  let result = await hrModel.addSalary(salary);
+  res.json(result);
 }
 
 async function updateEmployee(req, res) {
@@ -201,8 +254,21 @@ async function updateEmployee(req, res) {
     education,
     note,
     status_id,
+    bank,
+    family_dependant_name_1,
+    family_dependant_name_2,
+    family_dependant_name_3,
+    family_dependant_name_4,
+    family_dependant_name_5,
+    family_dependant_relationship_1,
+    family_dependant_relationship_2,
+    family_dependant_relationship_3,
+    family_dependant_relationship_4,
+    family_dependant_relationship_5,
+    salary,
+    six_percent,
   } = req.body;
-  hrModel.updateEmployee(
+  let result = await hrModel.updateEmployee(
     id,
     employee_id,
     name,
@@ -221,9 +287,22 @@ async function updateEmployee(req, res) {
     sign,
     education,
     note,
-    status_id
+    status_id,
+    bank,
+    family_dependant_name_1,
+    family_dependant_name_2,
+    family_dependant_name_3,
+    family_dependant_name_4,
+    family_dependant_name_5,
+    family_dependant_relationship_1,
+    family_dependant_relationship_2,
+    family_dependant_relationship_3,
+    family_dependant_relationship_4,
+    family_dependant_relationship_5,
+    salary,
+    six_percent
   );
-  res.json('成功');
+  res.json(result);
 }
 
 module.exports = {
@@ -236,7 +315,9 @@ module.exports = {
   getAllowance,
   getDeduction,
   getSalary,
+  getSalaryRecord,
   addEmployee,
   addLeave,
+  addSalary,
   updateEmployee,
 };

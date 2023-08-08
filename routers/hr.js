@@ -20,9 +20,13 @@ router.get('/getDeduction', hrController.getDeduction);
 
 router.get('/getSalary', hrController.getSalary);
 
+router.get('/getSalaryRecord', hrController.getSalaryRecord);
+
 router.post('/addEmployee', hrController.addEmployee);
 
 router.post('/addLeave', hrController.addLeave);
+
+router.post('/addSalary', hrController.addSalary);
 
 router.put('/updateEmployee', hrController.updateEmployee);
 
