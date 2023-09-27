@@ -17,7 +17,7 @@ const corsOptions = {
   // 如果要讓 cookie 可以跨網域存取，這邊要設定 credentials
   // 且 origin 也要設定
   credentials: true,
-  origin: ['http://localhost:5173', 'http://localhost:8000', 'http://192.168.1.108:8000'],
+  origin: ['http://localhost:5173', 'http://localhost:8000', 'http://192.168.1.106:8000'],
 };
 app.use(cors(corsOptions));
 app.use(express.json());

@@ -36,7 +36,7 @@ async function getLeave() {
 
 async function getLeaveRecord() {
   let data = await pool.query(
-    'SELECT lr.*, e.name, d.leave_name FROM leave_record lr LEFT JOIN employee e ON lr.employee_id = e.employee_id LEFT JOIN day_off d ON lr.leave_id = d.leave_id ORDER BY begin DESC'
+    'SELECT lr.*, e.name, d.leave_name, SUM(lr.hour) as total_hour  FROM leave_record lr LEFT JOIN employee e ON lr.employee_id = e.employee_id LEFT JOIN day_off d ON lr.leave_id = d.leave_id GROUP BY begin, end, employee_id ORDER BY begin DESC'
   );
   return data[0];
 }
@@ -70,10 +70,10 @@ async function getSalary(time) {
     `SELECT e.employee_id, e.name, registration_date, d.department_name, e.six_percent AS six, e.salary, 
         (SELECT SUM(lr.hour) FROM leave_record lr
         INNER JOIN day_off do ON lr.leave_id = do.leave_id
-        WHERE lr.employee_id = e.employee_id AND do.leave_name = '病假' AND lr.end Like ? ) AS sick, 
+        WHERE lr.employee_id = e.employee_id AND do.leave_name = '病假' AND lr.month LIKE ? ) AS sick, 
         (SELECT SUM(lr.hour) FROM leave_record lr
         INNER JOIN day_off do ON lr.leave_id = do.leave_id
-        WHERE lr.employee_id = e.employee_id AND do.leave_name = '事假' AND lr.end Like ?) AS personal,
+        WHERE lr.employee_id = e.employee_id AND do.leave_name = '事假' AND lr.month LIKE ?) AS personal,
         (CASE WHEN e.family_dependant_name_1 IS NOT NULL THEN 1 ELSE 0 END +
         CASE WHEN e.family_dependant_name_2 IS NOT NULL THEN 1 ELSE 0 END +
         CASE WHEN e.family_dependant_name_3 IS NOT NULL THEN 1 ELSE 0 END +
@@ -168,7 +168,7 @@ async function addEmployee(
     family_dependant_relationship_4,
     family_dependant_name_5,
     family_dependant_relationship_5,
-    six,
+    six_percent,
     salary) 
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `,
@@ -205,8 +205,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
   );
 }
 
-async function addLeave(begin, end, employee_id, leave_id, hour, note, now) {
-  await pool.execute(`INSERT INTO leave_record (employee_id, leave_id, hour, begin, end, note, time) VALUES (?, ?, ?, ?, ?, ?, ?)`, [
+async function addLeave(begin, end, month, employee_id, leave_id, hour, note, now) {
+  console.log(month);
+  await pool.execute(`INSERT INTO leave_record (employee_id, leave_id, hour, begin, end, note, time, month) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
     employee_id,
     leave_id,
     hour,
@@ -214,6 +215,7 @@ async function addLeave(begin, end, employee_id, leave_id, hour, note, now) {
     end,
     note,
     now,
+    month,
   ]);
 }
 
@@ -266,7 +268,6 @@ async function addSalary(salary, now) {
         moment(time).format(),
       ]
     );
-    // console.log(result);
   });
   return { message: '薪資紀錄新增成功' };
 }

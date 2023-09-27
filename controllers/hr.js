@@ -142,7 +142,6 @@ async function getDeduction(req, res) {
 async function getSalary(req, res) {
   let { time } = req.query;
   let data = await hrModel.getSalary(time);
-  console.log(data);
   res.json(data);
 }
 
@@ -220,9 +219,11 @@ async function addEmployee(req, res) {
 
 async function addLeave(req, res) {
   req.body.map((v) => {
-    const { begin, end, employee_id, leave_id, hour, note } = v;
+    const { begin, end, month, employee_id, leave_id, hour, note } = v;
     let now = moment().format();
-    hrModel.addLeave(begin, end, employee_id, leave_id, hour, note, now);
+    console.log(typeof begin);
+    console.log(typeof month);
+    hrModel.addLeave(begin, end, month, employee_id, leave_id, hour, note, now);
   });
   res.json('成功');
 }
