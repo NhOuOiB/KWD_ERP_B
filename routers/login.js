@@ -8,23 +8,28 @@ router.post('/login', async (req, res) => {
   let [users] = await pool.execute('SELECT * FROM account WHERE account = ?', [req.body.account]);
   //確認資料庫有無此信箱
   if (users.length == 0) {
-    return res.status(401).json({ message: '信箱或密碼錯誤' });
+    return res.status(401).json({ message: '帳號或密碼錯誤' });
   }
   let user = users[0];
-  let verifyResult = await pool.execute('SELECT * FROM account WHERE id = ? AND password = ?', [user.id, req.body.password]);
+  let verifyResult = await pool.execute(
+    'SELECT a.id, a.permission, e.name FROM account a INNER JOIN employee e ON a.employee_id = e.employee_id WHERE a.id = ? AND a.password = ? AND e.status = 2',
+    [user.id, req.body.password]
+  );
   // let verifyResult = await argon2.verify(user.password, req.body.password);
   if (verifyResult[0].length == 0) {
-    return res.status(401).json({ message: '信箱或密碼錯誤' });
+    return res.status(401).json({ message: '帳號或密碼錯誤' });
   }
 
+  const { id, name, permission } = verifyResult[0][0];
   let payload = {
-    id: user.id,
-    name: user.name,
+    id: id,
+    name: name,
+    permission: permission,
   };
 
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '3d' });
   res.cookie('token', token, {
-    // domain: '192.168.1.108:8000',
+    // domain: '192.168.1.106',
     // path: '/',
     httpOnly: true, // 防止 XSS 攻擊
     // sameSite: 'none',
@@ -33,8 +38,9 @@ router.post('/login', async (req, res) => {
   });
 
   res.json({
-    id: user.id,
-    name: user.account,
+    id: id,
+    name: name,
+    permission: permission,
   });
 });
 
