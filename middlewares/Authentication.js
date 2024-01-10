@@ -8,10 +8,10 @@ module.exports = async (req, res, next) => {
     return res.status(401).json({ message: '尚未登入' });
   }
   try {
-    jwt.verify(jwtoken, process.env.JWT_SECRET);
+    let { id, name, permission } = jwt.verify(jwtoken, process.env.JWT_SECRET);
+    return res.json({ id: id, name: name, permission: permission });
   } catch (err) {
-    if ((err = 'TokenExpiredError: jwt expired')) return res.status(401).json({ message: '憑證過期，請重新登入' });
+    console.log(err);
+    if (err === 'TokenExpiredError: jwt expired') return res.status(401).json({ message: '憑證過期，請重新登入' });
   }
-
-  return res.json();
 };
