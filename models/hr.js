@@ -206,7 +206,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
 }
 
 async function addLeave(begin, end, month, employee_id, leave_id, hour, note, now) {
-  console.log(month);
   await pool.execute(`INSERT INTO leave_record (employee_id, leave_id, hour, begin, end, note, time, month) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
     employee_id,
     leave_id,
@@ -221,7 +220,6 @@ async function addLeave(begin, end, month, employee_id, leave_id, hour, note, no
 
 async function addSalary(salary, now) {
   let timeCheck = await pool.query(`SELECT * FROM salary_record WHERE time LIKE ?`, [salary[0].time + `%`]);
-  console.log(moment(salary[0].time).format());
 
   if (timeCheck[0].length > 0) {
     return { message: '該月份已經有紀錄了' };
@@ -270,6 +268,27 @@ async function addSalary(salary, now) {
     );
   });
   return { message: '薪資紀錄新增成功' };
+}
+
+async function addClockRecord(employee_id, lat, lng, type) {
+  let time = new Date();
+
+  let already_clock_in = await pool.query('SELECT id FROM clock_record WHERE employee_id = ? AND DATE(in_time) = ?', [employee_id, moment(time).format('YYYY-MM-DD')]);
+  if (type === '上班') {
+    if (already_clock_in[0].length != 0 && typeof already_clock_in[0][0].id === 'number' && already_clock_in[0][0].id != 0) {
+      return { status: false, message: '已經有上班打卡紀錄了喔' };
+    } else {
+      await pool.execute(`INSERT INTO clock_record (employee_id, in_time, in_lat_lng) VALUES (?, ?, ?)`, [employee_id, time, `${lat}, ${lng}`]);
+      return { status: true, message: '上班打卡成功' };
+    }
+  } else if (type === '下班') {
+    if (already_clock_in[0].length != 0 && typeof already_clock_in[0][0].id === 'number' && already_clock_in[0][0].id != 0) {
+      await pool.execute(`UPDATE clock_record SET out_time = ?, out_lat_lng = ? WHERE id = ?`, [time, `${lat}, ${lng}`, already_clock_in[0][0].id]);
+      return { status: true, message: '下班打卡成功' };
+    } else {
+      return { status: false, message: '今天還沒有打過上班卡喔' };
+    }
+  }
 }
 
 async function updateEmployee(
@@ -367,5 +386,6 @@ module.exports = {
   addEmployee,
   addLeave,
   addSalary,
+  addClockRecord,
   updateEmployee,
 };

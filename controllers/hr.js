@@ -1,5 +1,7 @@
 const hrModel = require('../models/hr');
 const moment = require('moment');
+require('dotenv').config();
+const jwt = require('jsonwebtoken');
 
 async function getDepartmentName(req, res) {
   let data = await hrModel.getDepartmentName();
@@ -221,8 +223,6 @@ async function addLeave(req, res) {
   req.body.map((v) => {
     const { begin, end, month, employee_id, leave_id, hour, note } = v;
     let now = moment().format();
-    console.log(typeof begin);
-    console.log(typeof month);
     hrModel.addLeave(begin, end, month, employee_id, leave_id, hour, note, now);
   });
   res.json('成功');
@@ -231,6 +231,14 @@ async function addLeave(req, res) {
 async function addSalary(req, res) {
   const salary = req.body;
   let result = await hrModel.addSalary(salary);
+  res.json(result);
+}
+
+async function addClockRecord(req, res) {
+  const { lat, lng, type } = req.body;
+  const token = req.cookies.token;
+  const { id } = jwt.verify(token, process.env.JWT_SECRET);
+  let result = await hrModel.addClockRecord(id, lat, lng, type);
   res.json(result);
 }
 
@@ -320,5 +328,6 @@ module.exports = {
   addEmployee,
   addLeave,
   addSalary,
+  addClockRecord,
   updateEmployee,
 };

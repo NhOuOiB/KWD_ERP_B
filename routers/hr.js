@@ -28,6 +28,8 @@ router.post('/addLeave', hrController.addLeave);
 
 router.post('/addSalary', hrController.addSalary);
 
+router.post('/addClockRecord', hrController.addClockRecord);
+
 router.put('/updateEmployee', hrController.updateEmployee);
 
 module.exports = router;
